@@ -44,7 +44,7 @@ def find_landing_site(terrain: np.ndarray) -> Union[int, None]:
     # Return location if large enough
     if (end - start) > 40:
         loc = int(start + (end - start) * 0.5)
-        print("Found landing site at", loc)
+        # print("Found landing site at", loc)
         return loc
 
 
@@ -124,7 +124,7 @@ class Bot:
         if self.target_site is not None:
             command = None
             diff = self.target_site - x
-            if np.abs(diff) < 50:
+            if np.abs(diff) < 80:
                 # Reduce horizontal speed
                 if abs(vx) <= 0.1:
                     command = rotate(current=head, target=0)
