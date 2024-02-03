@@ -58,7 +58,7 @@ class Bot:
         self.avatar = 'icon.png'  # Optional attribute
         self.flag = "gb"  # Optional attribute
         self.initial_manoeuvre = True
-        self.target_site = None
+        self.target_site = int(screen_width/2)
         self.initial_target_site = int(screen_width/2)
         self.centered = False
         self.pidx = PID(1, 0.1, 0.05, setpoint=screen_width * 0.5)
