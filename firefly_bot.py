@@ -58,7 +58,7 @@ class Bot:
         self.avatar = 'icon.png'  # Optional attribute
         self.flag = "gb"  # Optional attribute
         self.initial_manoeuvre = True
-        self.target_site = int(screen_width/2)
+        self.target_site = None
         self.initial_target_site = int(screen_width/2)
         self.centered = False
         self.pidx = PID(1, 0.1, 0.05, setpoint=screen_width * 0.5)
@@ -124,7 +124,7 @@ class Bot:
             else:
                 self.target_site = target
         else:
-            target = self.target_site
+            target = self.initial_target_site
         sx = 0
 
         # If no landing site had been found, just hover at 900 altitude.
