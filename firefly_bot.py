@@ -58,22 +58,15 @@ class Bot:
         self.avatar = 'icon.png'  # Optional attribute
         self.flag = "gb"  # Optional attribute
         self.initial_manoeuvre = True
-        self.target_site = int(screen_width/2)
-        self.initial_target_site = int(screen_width/2)
-        self.centered = False
-        self.pidx = PID(1, 0.1, 0.05, setpoint=screen_width * 0.5)
-        self.pidy = PID(1, 0.1, 0.05, setpoint=top_screen * 0.9)
-        self.pidtheta = PID(1, 0.1, 0.05, setpoint=0)
-        self.pidvx = PID(1, 0.1, 0.05, setpoint=0)
-        self.pidvy = PID(1, 0.1, 0.05, setpoint=0)
+        self.target_site = None
 
     def run(
-            self,
-            t: float,
-            dt: float,
-            terrain: np.ndarray,
-            players: dict,
-            asteroids: list,
+        self,
+        t: float,
+        dt: float,
+        terrain: np.ndarray,
+        players: dict,
+        asteroids: list,
     ):
         """
         This is the method that will be called at every time step to get the
@@ -102,86 +95,56 @@ class Bot:
 
         # Perform an initial rotation to get the LEM pointing upwards
         if self.initial_manoeuvre:
-            if abs(head - self.pidtheta.setpoint) < 1:
-                self.initial_manoeuvre = False
+            if vx > 10:
+                instructions.main = True
             else:
-                new_v = self.pidtheta(head)
-                if new_v > 0:
+                command = rotate(current=head, target=0)
+                if command == "left":
                     instructions.left = True
-                    instructions.main = True
-                else:
+                elif command == "right":
                     instructions.right = True
-                    instructions.main = True
+                else:
+                    self.initial_manoeuvre = False
             return instructions
 
-        target = find_landing_site(terrain)
-        if target is not None:
-            if self.target_site is not None:
-                if abs(target - x) < (self.target_site - x):
-                    self.target_site = target
-                else:
-                    target = self.initial_target_site
+        _target_site = find_landing_site(terrain)
+
+        # Search for a suitable landing site
+        if _target_site is not None:
+            if self.target_site is None:
+                self.target_site = _target_site
             else:
-                self.target_site = target
-        else:
-            target = self.initial_target_site
-        sx = 0
+                if abs(_target_site - x) < (self.target_site - x):
+                    self.target_site = _target_site
 
         # If no landing site had been found, just hover at 900 altitude.
-        run_to_target = False
-        if target != self.initial_target_site:
-            run_to_target = True
-            target += sx
-            target_y = terrain[target]
-            diff = target - x
-            print('Going')
-        else:
-            diff = target - x
-            target = self.target_site
-            target_y = top_screen * 0.9
-            print('wriong')
-        if not run_to_target:
-            dx = 150
-        else:
-            dx = 50
+        if (self.target_site is None) and (y < 980) and (vy < 0):
+            instructions.main = True
 
-        print("Target:", target, "New Y:", target_y)
+        if self.target_site is not None:
+            command = None
+            diff = self.target_site - x
+            if np.abs(diff) < 50:
+                # Reduce horizontal speed
+                if abs(vx) <= 0.1:
+                    command = rotate(current=head, target=0)
+                elif vx > 0.1:
+                    command = rotate(current=head, target=90)
+                    instructions.main = True
+                else:
+                    command = rotate(current=head, target=-90)
+                    instructions.main = False
 
-        if self.pidy.setpoint != target_y:
-            self.pidy = PID(1, 0.1, 0.05, setpoint=target_y)
+                if command == "left":
+                    instructions.left = True
+                elif command == "right":
+                    instructions.right = True
 
-        new_y = self.pidy(y)
-
-        if np.abs(diff) < dx:
-            # Reduce horizontal speed
-            if abs(vx) <= 0.1:
-                command = rotate(current=head, target=0)
-            elif vx > 0.1:
-                command = rotate(current=head, target=70)
+                if (abs(vx) < 0.5) and (vy < -3):
+                    instructions.main = True
             else:
-                command = rotate(current=head, target=-70)
-            if new_y > 0:
-                instructions.main = True
-                return instructions
-            if command == "left":
-                instructions.left = True
-                instructions.main = True
-                return instructions
-            elif command == "right":
-                instructions.right = True
-                instructions.main = True
-                return instructions
-        else:
-            # Stay at constant altitude while moving towards target                command = rotate(current=head,
-            # target=0)
-            if new_y > 0:
-                instructions.main = True
-                return instructions
-            command = rotate(current=head, target=0)
-            if command == "left":
-                instructions.left = True
-                instructions.main = True
-            elif command == "right":
-                instructions.right = True
-                instructions.main = True
+                # Stay at constant altitude while moving towards target
+                if vy < 0:
+                    instructions.main = True
+
         return instructions
